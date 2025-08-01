@@ -43,13 +43,16 @@ export interface ApiSuccess<T> {
   data: T
 }
 
-// Workspace related types (for future use)
+// Workspace related types
 export interface Workspace {
+  _id: string
   workspaceId: string
   name: string
-  description?: string
+  description: string
   ownerId: string
-  members: WorkspaceMember[]
+  owner: User | string
+  members: (User | string)[]
+  memberCount: number
   createdAt: Date
   updatedAt: Date
 }
@@ -57,8 +60,58 @@ export interface Workspace {
 export interface WorkspaceMember {
   userId: string
   email: string
-  role: 'owner' | 'admin' | 'member' | 'viewer'
+  role: 'owner' | 'member'
   joinedAt: Date
+}
+
+export interface CreateWorkspaceRequest {
+  name: string
+  description?: string
+}
+
+export interface UpdateWorkspaceRequest {
+  name?: string
+  description?: string
+}
+
+export interface AddMemberRequest {
+  email: string
+}
+
+export interface RemoveMemberRequest {
+  userId: string
+}
+
+// Plan/Budget related types
+export interface Plan {
+  id: string
+  workspaceId: string
+  type: string
+  plannedAmount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreatePlanRequest {
+  workspaceId: string
+  type: string
+  plannedAmount: number
+}
+
+export interface UpdatePlanRequest {
+  type?: string
+  plannedAmount?: number
+}
+
+export interface PlanSummary {
+  totalPlans: number
+  totalPlannedAmount: number
+  averageAmount: number
+}
+
+export interface PlansResponse {
+  plans: Plan[]
+  summary: PlanSummary
 }
 
 // JWT Token payload

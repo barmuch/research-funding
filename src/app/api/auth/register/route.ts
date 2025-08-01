@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       return createErrorResponse(
         'Registration failed',
-        { email: ['User with this email already exists'] },
-        409
+        409,
+        { email: ['User with this email already exists'] }
       )
     }
 
@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && 'code' in error && error.code === 11000) {
       return createErrorResponse(
         'Registration failed',
-        { email: ['User with this email already exists'] },
-        409
+        409,
+        { email: ['User with this email already exists'] }
       )
     }
 

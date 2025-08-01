@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return createErrorResponse(
         'Login failed',
-        { email: ['Invalid email or password'] },
-        401
+        401,
+        { email: ['Invalid email or password'] }
       )
     }
 
@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
     if (!isPasswordValid) {
       return createErrorResponse(
         'Login failed',
-        { password: ['Invalid email or password'] },
-        401
+        401,
+        { password: ['Invalid email or password'] }
       )
     }
 

@@ -27,17 +27,13 @@ export function createSuccessResponse<T>(
  */
 export function createErrorResponse(
   message: string,
-  errors?: Record<string, string[]> | string,
-  status: number = 400
+  status: number = 400,
+  errors?: Record<string, string[]>
 ): NextResponse<ApiResponse> {
-  const errorObj = typeof errors === 'string' 
-    ? { general: [errors] }
-    : errors
-
   return NextResponse.json({
     success: false,
     message,
-    errors: errorObj
+    errors
   }, { status })
 }
 
@@ -49,8 +45,8 @@ export function createValidationErrorResponse(
 ): NextResponse<ApiResponse> {
   return createErrorResponse(
     'Validation failed',
-    errors,
-    422
+    422,
+    errors
   )
 }
 
@@ -60,7 +56,7 @@ export function createValidationErrorResponse(
 export function createUnauthorizedResponse(
   message: string = 'Unauthorized'
 ): NextResponse<ApiResponse> {
-  return createErrorResponse(message, undefined, 401)
+  return createErrorResponse(message, 401)
 }
 
 /**
@@ -69,5 +65,5 @@ export function createUnauthorizedResponse(
 export function createInternalErrorResponse(
   message: string = 'Internal server error'
 ): NextResponse<ApiResponse> {
-  return createErrorResponse(message, undefined, 500)
+  return createErrorResponse(message, 500)
 }
