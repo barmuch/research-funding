@@ -36,8 +36,8 @@ export async function GET(
 
     return createSuccessResponse('Plan retrieved successfully', {
       plan: {
-        id: plan._id.toString(),
-        workspaceId: plan.workspaceId.toString(),
+        id: (plan._id as any).toString(),
+        workspaceId: (plan.workspaceId as any).toString(),
         type: plan.type,
         plannedAmount: plan.plannedAmount,
         createdAt: plan.createdAt,
@@ -115,8 +115,8 @@ export async function PUT(
 
     return createSuccessResponse('Plan updated successfully', {
       plan: {
-        id: updatedPlan!._id.toString(),
-        workspaceId: updatedPlan!.workspaceId.toString(),
+        id: (updatedPlan!._id as any).toString(),
+        workspaceId: (updatedPlan!.workspaceId as any).toString(),
         type: updatedPlan!.type,
         plannedAmount: updatedPlan!.plannedAmount,
         createdAt: updatedPlan!.createdAt,
@@ -173,7 +173,7 @@ export async function DELETE(
 
     return createSuccessResponse('Plan deleted successfully', {
       deletedPlan: {
-        id: existingPlan._id.toString(),
+        id: (existingPlan._id as any).toString(),
         type: existingPlan.type,
         plannedAmount: existingPlan.plannedAmount
       }

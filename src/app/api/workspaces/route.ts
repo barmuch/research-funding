@@ -78,8 +78,8 @@ async function createWorkspaceHandler(request: NextRequest, userInfo: UserInfo) 
     if (existingWorkspace) {
       return createErrorResponse(
         'Workspace creation failed',
-        { name: ['You already have a workspace with this name'] },
-        409
+        409,
+        { name: ['You already have a workspace with this name'] }
       )
     }
 
@@ -115,8 +115,8 @@ async function createWorkspaceHandler(request: NextRequest, userInfo: UserInfo) 
     if (error instanceof Error && 'code' in error && error.code === 11000) {
       return createErrorResponse(
         'Workspace creation failed',
-        { name: ['You already have a workspace with this name'] },
-        409
+        409,
+        { name: ['You already have a workspace with this name'] }
       )
     }
 

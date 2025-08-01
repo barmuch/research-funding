@@ -9,8 +9,8 @@ import {
   createSuccessResponse, 
   createErrorResponse,
   createValidationErrorResponse,
-  createInternalErrorResponse,
-  createUnauthorizedResponse
+  createUnauthorizedResponse,
+  createInternalErrorResponse 
 } from '@/lib/api-response'
 
 // Validation schema for workspace update
@@ -57,7 +57,7 @@ async function getWorkspaceHandler(
     const { workspace, hasAccess } = await checkWorkspaceAccess(params.workspaceId, userInfo.userId)
 
     if (!workspace) {
-      return createErrorResponse('Workspace not found', undefined, 404)
+      return createErrorResponse('Workspace not found', 404)
     }
 
     if (!hasAccess) {
@@ -91,7 +91,7 @@ async function updateWorkspaceHandler(
     const { workspace, hasAccess, isOwner } = await checkWorkspaceAccess(params.workspaceId, userInfo.userId)
 
     if (!workspace) {
-      return createErrorResponse('Workspace not found', undefined, 404)
+      return createErrorResponse('Workspace not found', 404)
     }
 
     if (!hasAccess) {
@@ -123,8 +123,8 @@ async function updateWorkspaceHandler(
       if (existingWorkspace) {
         return createErrorResponse(
           'Update failed',
-          { name: ['You already have a workspace with this name'] },
-          409
+          409,
+          { name: ['You already have a workspace with this name'] }
         )
       }
     }
@@ -160,7 +160,7 @@ async function deleteWorkspaceHandler(
     const { workspace, hasAccess, isOwner } = await checkWorkspaceAccess(params.workspaceId, userInfo.userId)
 
     if (!workspace) {
-      return createErrorResponse('Workspace not found', undefined, 404)
+      return createErrorResponse('Workspace not found', 404)
     }
 
     if (!hasAccess) {

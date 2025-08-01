@@ -57,9 +57,9 @@ export default function WorkspacePlansPage() {
         setWorkspaceName(workspaceData.data.workspace.name)
       }
 
-      if (plansData.success) {
-        setPlans(plansData.data.plans)
-        setSummary(plansData.data.summary)
+      if ((plansData as any).success) {
+        setPlans((plansData as any).data.plans)
+        setSummary((plansData as any).data.summary)
       } else {
         if (plansResponse.status === 401) {
           localStorage.removeItem('token')

@@ -44,7 +44,7 @@ export async function verifyWorkspaceAccess(
     await connectDB()
 
     // Find workspace and check if user has access
-    const workspace = await Workspace.findById(workspaceId).lean()
+    const workspace = await Workspace.findById(workspaceId)
     
     if (!workspace) {
       return { success: false, message: 'Workspace not found', status: 404 }

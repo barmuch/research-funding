@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
 
     return createSuccessResponse('Plans retrieved successfully', {
       plans: plans.map(plan => ({
-        id: plan._id.toString(),
-        workspaceId: plan.workspaceId.toString(),
+        id: (plan._id as any).toString(),
+        workspaceId: (plan.workspaceId as any).toString(),
         type: plan.type,
         plannedAmount: plan.plannedAmount,
         createdAt: plan.createdAt,
@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
 
     return createSuccessResponse('Plan created successfully', {
       plan: {
-        id: newPlan._id.toString(),
-        workspaceId: newPlan.workspaceId.toString(),
+        id: (newPlan._id as any).toString(),
+        workspaceId: (newPlan.workspaceId as any).toString(),
         type: newPlan.type,
         plannedAmount: newPlan.plannedAmount,
         createdAt: newPlan.createdAt,

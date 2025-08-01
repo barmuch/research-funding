@@ -54,7 +54,7 @@ async function addMemberHandler(
     const { workspace, isOwner } = await checkWorkspaceOwnership(params.workspaceId, userInfo.userId)
 
     if (!workspace) {
-      return createErrorResponse('Workspace not found', undefined, 404)
+      return createErrorResponse('Workspace not found', 404)
     }
 
     if (!isOwner) {
@@ -76,8 +76,8 @@ async function addMemberHandler(
     if (!userToAdd) {
       return createErrorResponse(
         'User not found',
-        { email: ['No user found with this email address'] },
-        404
+        404,
+        { email: ['No user found with this email address'] }
       )
     }
 
@@ -85,8 +85,8 @@ async function addMemberHandler(
     if (userToAdd._id.toString() === userInfo.userId) {
       return createErrorResponse(
         'Invalid operation',
-        { email: ['You cannot add yourself to the workspace'] },
-        400
+        400,
+        { email: ['You cannot add yourself to the workspace'] }
       )
     }
 
@@ -94,8 +94,8 @@ async function addMemberHandler(
     if (workspace.isMember(userToAdd._id.toString())) {
       return createErrorResponse(
         'User already a member',
-        { email: ['This user is already a member of the workspace'] },
-        409
+        409,
+        { email: ['This user is already a member of the workspace'] }
       )
     }
 
@@ -142,7 +142,7 @@ async function removeMemberHandler(
     const { workspace, isOwner } = await checkWorkspaceOwnership(params.workspaceId, userInfo.userId)
 
     if (!workspace) {
-      return createErrorResponse('Workspace not found', undefined, 404)
+      return createErrorResponse('Workspace not found', 404)
     }
 
     if (!isOwner) {
@@ -163,8 +163,8 @@ async function removeMemberHandler(
     if (userId === userInfo.userId) {
       return createErrorResponse(
         'Invalid operation',
-        { userId: ['You cannot remove yourself from your own workspace'] },
-        400
+        400,
+        { userId: ['You cannot remove yourself from your own workspace'] }
       )
     }
 
@@ -172,8 +172,8 @@ async function removeMemberHandler(
     if (!workspace.isMember(userId)) {
       return createErrorResponse(
         'User not found',
-        { userId: ['This user is not a member of the workspace'] },
-        404
+        404,
+        { userId: ['This user is not a member of the workspace'] }
       )
     }
 
@@ -222,7 +222,7 @@ async function getMembersHandler(
 
     const workspace = await Workspace.findById(params.workspaceId)
     if (!workspace) {
-      return createErrorResponse('Workspace not found', undefined, 404)
+      return createErrorResponse('Workspace not found', 404)
     }
 
     // Check if user has access to workspace
