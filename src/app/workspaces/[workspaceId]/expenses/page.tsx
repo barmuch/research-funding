@@ -10,6 +10,9 @@ import SummaryCards, { SummaryCard } from '@/components/SummaryCards'
 import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
 import FormField from '@/components/FormField'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import { appToast, crudToast } from '@/lib/toast'
+import { useCrudOperations, useConfirmation } from '@/hooks/useConfirmation'
 
 interface ExpensesPageProps {
   params: Promise<{ workspaceId: string }>
@@ -49,6 +52,10 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
   })
   const [formLoading, setFormLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({})
+
+  // Toast hooks
+  const { createWithToast, updateWithToast, deleteWithToast } = useCrudOperations()
+  const { showConfirmation, confirmationProps } = useConfirmation()
 
   const router = useRouter()
 
@@ -115,42 +122,46 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
 
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault()
-    setFormLoading(true)
-    setFormErrors({})
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          date: new Date(formData.date!).toISOString()
+    const result = await createWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch('/api/expenses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            ...formData,
+            date: new Date(formData.date!).toISOString()
+          })
         })
+
+        const data = await response.json()
+
+        if (!data.success) {
+          if (data.errors) {
+            setFormErrors(data.errors)
+          }
+          throw new Error(data.message || 'Failed to create expense')
+        }
+
+        return data
+      },
+      'expense'
+    )
+
+    if (result) {
+      setShowCreateModal(false)
+      setFormData({
+        workspaceId: workspaceId,
+        planType: 'other',
+        amount: 0,
+        note: '',
+        date: new Date().toISOString().split('T')[0]
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setShowCreateModal(false)
-        setFormData({
-          workspaceId: workspaceId,
-          planType: 'other',
-          amount: 0,
-          note: '',
-          date: new Date().toISOString().split('T')[0]
-        })
-        loadData() // Reload data
-      } else {
-        setFormErrors(data.errors || {})
-      }
-    } catch (error) {
-      setError('Failed to create expense')
-    } finally {
-      setFormLoading(false)
+      loadData() // Reload data
     }
   }
 
@@ -158,69 +169,75 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
     e.preventDefault()
     if (!editingExpense) return
 
-    setFormLoading(true)
-    setFormErrors({})
-
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/expenses/${editingExpense.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          planType: formData.planType,
-          amount: formData.amount,
-          note: formData.note,
-          date: new Date(formData.date!).toISOString()
+    const result = await updateWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/expenses/${editingExpense.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            planType: formData.planType,
+            amount: formData.amount,
+            note: formData.note,
+            date: new Date(formData.date!).toISOString()
+          })
         })
+
+        const data = await response.json()
+
+        if (!data.success) {
+          if (data.errors) {
+            setFormErrors(data.errors)
+          }
+          throw new Error(data.message || 'Failed to update expense')
+        }
+
+        return data
+      },
+      'expense'
+    )
+
+    if (result) {
+      setShowEditModal(false)
+      setEditingExpense(null)
+      setFormData({
+        workspaceId: workspaceId,
+        planType: 'other',
+        amount: 0,
+        note: '',
+        date: new Date().toISOString().split('T')[0]
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setShowEditModal(false)
-        setEditingExpense(null)
-        setFormData({
-          workspaceId: workspaceId,
-          planType: 'other',
-          amount: 0,
-          note: '',
-          date: new Date().toISOString().split('T')[0]
-        })
-        loadData() // Reload data
-      } else {
-        setFormErrors(data.errors || {})
-      }
-    } catch (error) {
-      setError('Failed to update expense')
-    } finally {
-      setFormLoading(false)
+      loadData() // Reload data
     }
   }
 
   const handleDeleteExpense = async (expenseId: string) => {
-    if (!confirm('Are you sure you want to delete this expense? This action cannot be undone.')) return
+    const result = await deleteWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/expenses/${expenseId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/expenses/${expenseId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to delete expense')
         }
-      })
 
-      const data = await response.json()
+        return data
+      },
+      'expense'
+    )
 
-      if (data.success) {
-        loadData() // Reload data
-      } else {
-        alert(data.message || 'Failed to delete expense')
-      }
-    } catch (error) {
-      alert('Failed to delete expense')
+    if (result) {
+      loadData() // Reload data after successful deletion
     }
   }
 
@@ -709,6 +726,8 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog {...confirmationProps} />
     </DashboardLayout>
   )
 }

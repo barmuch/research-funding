@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { appToast } from '@/lib/toast'
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -56,8 +57,16 @@ export default function RegisterPage() {
     if (Object.keys(clientErrors).length > 0) {
       setErrors(clientErrors)
       setLoading(false)
+      // Show validation error toast
+      if (clientErrors.confirmPassword) {
+        appToast.error(clientErrors.confirmPassword[0])
+      } else if (clientErrors.password) {
+        appToast.error(clientErrors.password[0])
+      }
       return
     }
+
+    const loadingToast = appToast.loading('Creating account...')
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -73,10 +82,12 @@ export default function RegisterPage() {
 
       const data = await response.json()
 
+      appToast.dismiss(loadingToast)
+
       if (data.success) {
         // Store token in localStorage (in production, consider httpOnly cookies)
         localStorage.setItem('token', data.data.token)
-        setMessage('Registration successful! Redirecting...')
+        appToast.success('Registration successful! Redirecting...')
         
         // Redirect to dashboard or home page
         setTimeout(() => {
@@ -84,9 +95,15 @@ export default function RegisterPage() {
         }, 1000)
       } else {
         setErrors(data.errors || {})
-        setMessage(data.message)
+        if (data.message) {
+          appToast.error(data.message)
+        } else {
+          appToast.error('Registration failed. Please try again.')
+        }
       }
     } catch (error) {
+      appToast.dismiss(loadingToast)
+      appToast.error('Network error. Please try again.')
       setMessage('Network error. Please try again.')
     } finally {
       setLoading(false)

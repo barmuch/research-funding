@@ -10,6 +10,9 @@ import SummaryCards, { SummaryCard } from '@/components/SummaryCards'
 import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
 import FormField from '@/components/FormField'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import { appToast, crudToast } from '@/lib/toast'
+import { useCrudOperations, useConfirmation } from '@/hooks/useConfirmation'
 
 export default function WorkspaceDetailPage() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
@@ -26,12 +29,14 @@ export default function WorkspaceDetailPage() {
   
   // Form states
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteError, setInviteError] = useState('')
   
   const [editData, setEditData] = useState({ name: '', description: '' })
-  const [editLoading, setEditLoading] = useState(false)
   const [editErrors, setEditErrors] = useState<Record<string, string[]>>({})
+  
+  // Toast hooks
+  const { createWithToast, updateWithToast, deleteWithToast } = useCrudOperations()
+  const { showConfirmation, confirmationProps } = useConfirmation()
   
   const router = useRouter()
   const params = useParams()
@@ -115,68 +120,73 @@ export default function WorkspaceDetailPage() {
 
   const handleInviteMember = async (e: React.FormEvent) => {
     e.preventDefault()
-    setInviteLoading(true)
-    setInviteError('')
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ email: inviteEmail })
-      })
+    const result = await createWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ email: inviteEmail })
+        })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        setShowInviteModal(false)
-        setInviteEmail('')
-        loadWorkspaceData() // Reload to get updated members list
-      } else {
-        setInviteError(data.message || 'Failed to invite member')
-      }
-    } catch (error) {
-      setInviteError('Failed to invite member')
-    } finally {
-      setInviteLoading(false)
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to invite member')
+        }
+
+        return data
+      },
+      'member invitation'
+    )
+
+    if (result) {
+      setShowInviteModal(false)
+      setInviteEmail('')
+      setInviteError('')
+      loadWorkspaceData() // Reload to get updated members list
     }
   }
 
   const handleRemoveMember = async (userId: string) => {
-    if (!confirm('Are you sure you want to remove this member?')) return
+    const result = await deleteWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ userId })
+        })
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/workspaces/${workspaceId}/members`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ userId })
-      })
+        const data = await response.json()
 
-      const data = await response.json()
+        if (!data.success) {
+          throw new Error(data.message || 'Failed to remove member')
+        }
 
-      if (data.success) {
-        loadWorkspaceData() // Reload to get updated members list
-      } else {
-        alert(data.message || 'Failed to remove member')
-      }
-    } catch (error) {
-      alert('Failed to remove member')
+        return data
+      },
+      'member'
+    )
+
+    if (result) {
+      loadWorkspaceData() // Reload to get updated members list
     }
   }
 
   const handleUpdateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault()
-    setEditLoading(true)
-    setEditErrors({})
 
     try {
+      const loadingToast = appToast.loading('Updating workspace...')
+      
       const token = localStorage.getItem('token')
       const response = await fetch(`/api/workspaces/${workspaceId}`, {
         method: 'PUT',
@@ -189,23 +199,38 @@ export default function WorkspaceDetailPage() {
 
       const data = await response.json()
 
+      appToast.dismiss(loadingToast)
+
       if (data.success) {
+        appToast.success('Workspace updated successfully!')
         setWorkspace(data.data.workspace)
         setShowEditModal(false)
+        setEditErrors({})
       } else {
-        setEditErrors(data.errors || {})
+        if (data.errors) {
+          setEditErrors(data.errors)
+        }
+        appToast.error(data.message || 'Failed to update workspace')
       }
     } catch (error) {
-      setError('Failed to update workspace')
-    } finally {
-      setEditLoading(false)
+      appToast.error('Network error occurred')
     }
   }
 
   const handleDeleteWorkspace = async () => {
-    if (!confirm('Are you sure you want to delete this workspace? This action cannot be undone.')) return
+    // Show confirmation dialog first
+    const confirmed = await showConfirmation({
+      title: 'Delete Workspace',
+      message: 'Are you sure you want to delete this workspace? This action cannot be undone.',
+      confirmText: 'Delete',
+      confirmButtonStyle: 'danger'
+    })
+
+    if (!confirmed) return
 
     try {
+      const loadingToast = appToast.loading('Deleting workspace...')
+      
       const token = localStorage.getItem('token')
       const response = await fetch(`/api/workspaces/${workspaceId}`, {
         method: 'DELETE',
@@ -216,13 +241,16 @@ export default function WorkspaceDetailPage() {
 
       const data = await response.json()
 
+      appToast.dismiss(loadingToast)
+
       if (data.success) {
+        appToast.success('Workspace deleted successfully!')
         router.push('/workspaces')
       } else {
-        alert(data.message || 'Failed to delete workspace')
+        appToast.error(data.message || 'Failed to delete workspace')
       }
     } catch (error) {
-      alert('Failed to delete workspace')
+      appToast.error('Network error occurred')
     }
   }
 
@@ -452,10 +480,9 @@ export default function WorkspaceDetailPage() {
             </button>
             <button
               type="submit"
-              disabled={inviteLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
             >
-              {inviteLoading ? 'Inviting...' : 'Invite'}
+              Invite
             </button>
           </div>
         </form>
@@ -510,14 +537,15 @@ export default function WorkspaceDetailPage() {
             </button>
             <button
               type="submit"
-              disabled={editLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
             >
-              {editLoading ? 'Updating...' : 'Update'}
+              Update
             </button>
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog {...confirmationProps} />
     </DashboardLayout>
   )
 }

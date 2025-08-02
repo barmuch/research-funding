@@ -10,6 +10,9 @@ import SummaryCards, { SummaryCard } from '@/components/SummaryCards'
 import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
 import FormField from '@/components/FormField'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import { appToast, crudToast } from '@/lib/toast'
+import { useCrudOperations } from '@/hooks/useConfirmation'
 
 export default function WorkspacePlansPage() {
   const [plans, setPlans] = useState<Plan[]>([])
@@ -27,6 +30,9 @@ export default function WorkspacePlansPage() {
   const [formData, setFormData] = useState({ type: '', plannedAmount: 0 })
   const [formLoading, setFormLoading] = useState(false)
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({})
+  
+  // Toast and confirmation hooks
+  const { showConfirmation, confirmationProps, createWithToast, updateWithToast, deleteWithToast } = useCrudOperations()
   
   const router = useRouter()
   const params = useParams()
@@ -69,13 +75,18 @@ export default function WorkspacePlansPage() {
       } else {
         if (plansResponse.status === 401) {
           localStorage.removeItem('token')
+          crudToast.unauthorized()
           router.push('/auth/login')
         } else {
-          setError('Failed to load plans data')
+          const errorMessage = 'Gagal memuat data rencana anggaran'
+          setError(errorMessage)
+          crudToast.loadError('rencana anggaran', errorMessage)
         }
       }
     } catch (error) {
-      setError('Failed to load plans data')
+      const errorMessage = 'Gagal memuat data rencana anggaran'
+      setError(errorMessage)
+      crudToast.networkError()
     } finally {
       setLoading(false)
     }
@@ -86,35 +97,45 @@ export default function WorkspacePlansPage() {
     setFormLoading(true)
     setFormErrors({})
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch('/api/plans', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          workspaceId,
-          type: formData.type,
-          plannedAmount: formData.plannedAmount
+    const result = await createWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch('/api/plans', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            workspaceId,
+            type: formData.type,
+            plannedAmount: formData.plannedAmount
+          })
         })
-      })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        setShowCreateModal(false)
-        setFormData({ type: '', plannedAmount: 0 })
-        loadData() // Reload data
-      } else {
-        setFormErrors(data.errors || {})
-      }
-    } catch (error) {
-      setError('Failed to create plan')
-    } finally {
-      setFormLoading(false)
+        if (!data.success) {
+          if (data.errors) {
+            setFormErrors(data.errors)
+            throw new Error('Validasi gagal')
+          }
+          throw new Error(data.message || 'Gagal membuat rencana anggaran')
+        }
+
+        return data
+      },
+      'rencana anggaran',
+      { skipConfirmation: true }
+    )
+
+    if (result) {
+      setShowCreateModal(false)
+      setFormData({ type: '', plannedAmount: 0 })
+      loadData() // Reload data
     }
+
+    setFormLoading(false)
   }
 
   const handleUpdatePlan = async (e: React.FormEvent) => {
@@ -124,58 +145,70 @@ export default function WorkspacePlansPage() {
     setFormLoading(true)
     setFormErrors({})
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/plans/${editingPlan.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          type: formData.type,
-          plannedAmount: formData.plannedAmount
+    const result = await updateWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/plans/${editingPlan.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            type: formData.type,
+            plannedAmount: formData.plannedAmount
+          })
         })
-      })
 
-      const data = await response.json()
+        const data = await response.json()
 
-      if (data.success) {
-        setShowEditModal(false)
-        setEditingPlan(null)
-        setFormData({ type: '', plannedAmount: 0 })
-        loadData() // Reload data
-      } else {
-        setFormErrors(data.errors || {})
-      }
-    } catch (error) {
-      setError('Failed to update plan')
-    } finally {
-      setFormLoading(false)
+        if (!data.success) {
+          if (data.errors) {
+            setFormErrors(data.errors)
+            throw new Error('Validasi gagal')
+          }
+          throw new Error(data.message || 'Gagal mengupdate rencana anggaran')
+        }
+
+        return data
+      },
+      'rencana anggaran'
+    )
+
+    if (result) {
+      setShowEditModal(false)
+      setEditingPlan(null)
+      setFormData({ type: '', plannedAmount: 0 })
+      loadData() // Reload data
     }
+
+    setFormLoading(false)
   }
 
   const handleDeletePlan = async (planId: string) => {
-    if (!confirm('Are you sure you want to delete this plan? This action cannot be undone.')) return
+    const result = await deleteWithToast(
+      async () => {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/plans/${planId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
 
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/plans/${planId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
+        const data = await response.json()
+
+        if (!data.success) {
+          throw new Error(data.message || 'Gagal menghapus rencana anggaran')
         }
-      })
 
-      const data = await response.json()
+        return data
+      },
+      'rencana anggaran'
+    )
 
-      if (data.success) {
-        loadData() // Reload data
-      } else {
-        alert(data.message || 'Failed to delete plan')
-      }
-    } catch (error) {
-      alert('Failed to delete plan')
+    if (result) {
+      loadData() // Reload data
     }
   }
 
@@ -547,6 +580,9 @@ export default function WorkspacePlansPage() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog {...confirmationProps} />
     </DashboardLayout>
   )
 }

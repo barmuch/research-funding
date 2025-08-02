@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { appToast } from '@/lib/toast'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -36,6 +37,8 @@ export default function LoginPage() {
     setErrors({})
     setMessage('')
 
+    const loadingToast = appToast.loading('Signing in...')
+
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -47,10 +50,12 @@ export default function LoginPage() {
 
       const data = await response.json()
 
+      appToast.dismiss(loadingToast)
+
       if (data.success) {
         // Store token in localStorage (in production, consider httpOnly cookies)
         localStorage.setItem('token', data.data.token)
-        setMessage('Login successful! Redirecting...')
+        appToast.success('Login successful! Redirecting...')
         
         // Redirect to dashboard or home page
         setTimeout(() => {
@@ -58,9 +63,15 @@ export default function LoginPage() {
         }, 1000)
       } else {
         setErrors(data.errors || {})
-        setMessage(data.message)
+        if (data.message) {
+          appToast.error(data.message)
+        } else {
+          appToast.error('Login failed. Please check your credentials.')
+        }
       }
     } catch (error) {
+      appToast.dismiss(loadingToast)
+      appToast.error('Network error. Please try again.')
       setMessage('Network error. Please try again.')
     } finally {
       setLoading(false)
