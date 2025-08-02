@@ -7,7 +7,6 @@ import DashboardLayout from '@/components/DashboardLayout'
 import PageHeader from '@/components/PageHeader'
 import TabNavigation, { TabItem } from '@/components/TabNavigation'
 import SummaryCards, { SummaryCard } from '@/components/SummaryCards'
-import LoadingState from '@/components/LoadingState'
 import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
 import FormField from '@/components/FormField'
@@ -268,7 +267,39 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
   }
 
   if (loading) {
-    return <LoadingState message="Loading expenses..." />
+    return (
+      <DashboardLayout breadcrumbs={[
+        { label: 'Workspaces', href: '/workspaces' },
+        { label: 'Workspace', href: `/workspaces/${workspaceId}` },
+        { label: 'Expenses', active: true }
+      ]}>
+        <div className="space-y-6">
+          <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
+          <div className="h-10 bg-gray-100 rounded w-full animate-pulse"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-white p-6 rounded-lg shadow">
+                <div className="h-4 bg-gray-100 rounded w-1/2 mb-2 animate-pulse"></div>
+                <div className="h-6 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="h-6 bg-gray-100 rounded w-1/4 mb-4 animate-pulse"></div>
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex space-x-4">
+                  <div className="h-4 bg-gray-100 rounded flex-1 animate-pulse"></div>
+                  <div className="h-4 bg-gray-100 rounded w-24 animate-pulse"></div>
+                  <div className="h-4 bg-gray-100 rounded w-20 animate-pulse"></div>
+                  <div className="h-4 bg-gray-100 rounded w-16 animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   if (error) {
@@ -290,8 +321,9 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
   // Prepare tabs
   const tabs: TabItem[] = [
     { label: 'Overview', href: `/workspaces/${workspaceId}` },
-    { label: 'Budget Plans', href: `/workspaces/${workspaceId}/plans` },
-    { label: 'Expenses', active: true, isButton: true }
+    { label: 'Expenses', active: true, isButton: true },
+    { label: 'Budget Plans', href: `/workspaces/${workspaceId}/plans` }
+    
   ]
 
   // Prepare summary cards
