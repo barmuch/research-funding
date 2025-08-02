@@ -286,6 +286,12 @@ export default function WorkspacePlansPage() {
                 <button className="border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                   Budget Plans
                 </button>
+                <Link 
+                  href={`/workspaces/${workspaceId}/expenses`}
+                  className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                >
+                  Expenses
+                </Link>
               </nav>
             </div>
           </div>

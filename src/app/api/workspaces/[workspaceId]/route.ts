@@ -49,12 +49,13 @@ async function checkWorkspaceAccess(workspaceId: string, userId: string) {
 async function getWorkspaceHandler(
   request: NextRequest, 
   userInfo: UserInfo,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     await connectDB()
 
-    const { workspace, hasAccess } = await checkWorkspaceAccess(params.workspaceId, userInfo.userId)
+    const { workspaceId } = await params
+    const { workspace, hasAccess } = await checkWorkspaceAccess(workspaceId, userInfo.userId)
 
     if (!workspace) {
       return createErrorResponse('Workspace not found', 404)
@@ -83,12 +84,13 @@ async function getWorkspaceHandler(
 async function updateWorkspaceHandler(
   request: NextRequest, 
   userInfo: UserInfo,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     await connectDB()
 
-    const { workspace, hasAccess, isOwner } = await checkWorkspaceAccess(params.workspaceId, userInfo.userId)
+    const { workspaceId } = await params
+    const { workspace, hasAccess, isOwner } = await checkWorkspaceAccess(workspaceId, userInfo.userId)
 
     if (!workspace) {
       return createErrorResponse('Workspace not found', 404)
@@ -152,12 +154,13 @@ async function updateWorkspaceHandler(
 async function deleteWorkspaceHandler(
   request: NextRequest, 
   userInfo: UserInfo,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     await connectDB()
 
-    const { workspace, hasAccess, isOwner } = await checkWorkspaceAccess(params.workspaceId, userInfo.userId)
+    const { workspaceId } = await params
+    const { workspace, hasAccess, isOwner } = await checkWorkspaceAccess(workspaceId, userInfo.userId)
 
     if (!workspace) {
       return createErrorResponse('Workspace not found', 404)
@@ -192,14 +195,14 @@ async function deleteWorkspaceHandler(
 }
 
 // Export protected handlers with proper typing for Next.js dynamic routes
-export async function GET(request: NextRequest, context: { params: { workspaceId: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
   return withAuth((req, userInfo) => getWorkspaceHandler(req, userInfo, context))(request)
 }
 
-export async function PUT(request: NextRequest, context: { params: { workspaceId: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
   return withAuth((req, userInfo) => updateWorkspaceHandler(req, userInfo, context))(request)
 }
 
-export async function DELETE(request: NextRequest, context: { params: { workspaceId: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
   return withAuth((req, userInfo) => deleteWorkspaceHandler(req, userInfo, context))(request)
 }

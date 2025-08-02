@@ -46,12 +46,13 @@ async function checkWorkspaceOwnership(workspaceId: string, userId: string) {
 async function addMemberHandler(
   request: NextRequest, 
   userInfo: UserInfo,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     await connectDB()
 
-    const { workspace, isOwner } = await checkWorkspaceOwnership(params.workspaceId, userInfo.userId)
+    const { workspaceId } = await params
+    const { workspace, isOwner } = await checkWorkspaceOwnership(workspaceId, userInfo.userId)
 
     if (!workspace) {
       return createErrorResponse('Workspace not found', 404)
@@ -134,12 +135,13 @@ async function addMemberHandler(
 async function removeMemberHandler(
   request: NextRequest, 
   userInfo: UserInfo,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     await connectDB()
 
-    const { workspace, isOwner } = await checkWorkspaceOwnership(params.workspaceId, userInfo.userId)
+    const { workspaceId } = await params
+    const { workspace, isOwner } = await checkWorkspaceOwnership(workspaceId, userInfo.userId)
 
     if (!workspace) {
       return createErrorResponse('Workspace not found', 404)
@@ -215,12 +217,13 @@ async function removeMemberHandler(
 async function getMembersHandler(
   request: NextRequest, 
   userInfo: UserInfo,
-  { params }: { params: { workspaceId: string } }
+  { params }: { params: Promise<{ workspaceId: string }> }
 ) {
   try {
     await connectDB()
 
-    const workspace = await Workspace.findById(params.workspaceId)
+    const { workspaceId } = await params
+    const workspace = await Workspace.findById(workspaceId)
     if (!workspace) {
       return createErrorResponse('Workspace not found', 404)
     }
@@ -262,14 +265,14 @@ async function getMembersHandler(
 }
 
 // Export protected handlers with proper typing for Next.js dynamic routes
-export async function POST(request: NextRequest, context: { params: { workspaceId: string } }) {
+export async function POST(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
   return withAuth((req, userInfo) => addMemberHandler(req, userInfo, context))(request)
 }
 
-export async function DELETE(request: NextRequest, context: { params: { workspaceId: string } }) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
   return withAuth((req, userInfo) => removeMemberHandler(req, userInfo, context))(request)
 }
 
-export async function GET(request: NextRequest, context: { params: { workspaceId: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ workspaceId: string }> }) {
   return withAuth((req, userInfo) => getMembersHandler(req, userInfo, context))(request)
 }

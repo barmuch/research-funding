@@ -329,6 +329,12 @@ export default function WorkspaceDetailPage() {
                 >
                   Budget Plans
                 </Link>
+                <Link 
+                  href={`/workspaces/${workspaceId}/expenses`}
+                  className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                >
+                  Expenses
+                </Link>
               </nav>
             </div>
           </div>

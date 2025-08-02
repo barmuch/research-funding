@@ -114,6 +114,72 @@ export interface PlansResponse {
   summary: PlanSummary
 }
 
+// Expense/Actual spending related types
+export interface Expense {
+  id: string
+  workspaceId: string
+  planType?: string
+  amount: number
+  note?: string
+  date: Date
+  createdBy: {
+    id: string
+    email: string
+    name?: string
+  }
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CreateExpenseRequest {
+  workspaceId: string
+  planType?: string
+  amount: number
+  note?: string
+  date?: string | Date
+}
+
+export interface UpdateExpenseRequest {
+  planType?: string
+  amount?: number
+  note?: string
+  date?: string | Date
+}
+
+export interface ExpenseSummary {
+  totalExpenses: number
+  totalAmount: number
+  byPlanType: {
+    planType: string
+    total: number
+    count: number
+  }[]
+}
+
+export interface ExpensesResponse {
+  success: boolean
+  message: string
+  data: {
+    expenses: Expense[]
+    pagination: {
+      total: number
+      limit: number
+      offset: number
+      hasMore: boolean
+    }
+    summary: ExpenseSummary
+  }
+}
+
+export interface GetExpensesQuery {
+  workspaceId: string
+  planType?: string
+  startDate?: string
+  endDate?: string
+  limit?: number
+  offset?: number
+}
+
 // JWT Token payload
 export interface JWTPayload {
   userId: string
