@@ -11,6 +11,7 @@ import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
 import FormField from '@/components/FormField'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import VisionOCR from '@/components/VisionOCR'
 import { appToast, crudToast } from '@/lib/toast'
 import { useCrudOperations, useConfirmation } from '@/hooks/useConfirmation'
 
@@ -399,150 +400,250 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
       {/* Summary Cards */}
       {summary && <SummaryCards cards={summaryCards} />}
 
-      {/* Filters */}
-      <div className="bg-white shadow rounded-lg mb-6">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Filters</h3>
+      {/* Quick Actions Section with OCR - Mobile Optimized */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
+        {/* OCR Scanner - Full width on mobile */}
+        <div className="lg:col-span-1 order-1 lg:order-1">
+          <VisionOCR 
+            workspaceId={workspaceId}
+            onExtractedItems={(items) => {
+              console.log('Extracted items:', items)
+            }}
+            onSuccessAddItem={() => {
+              loadData()
+              appToast.success('Item from receipt added successfully!')
+            }}
+          />
         </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Plan Type
-              </label>
-              <select
-                value={selectedPlanType}
-                onChange={(e) => setSelectedPlanType(e.target.value)}
-                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">All Categories</option>
-                {planTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
-                  </option>
-                ))}
-              </select>
+        
+        {/* Filters - Full width on mobile, stacks below OCR */}
+        <div className="lg:col-span-2 order-2 lg:order-2">
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900">Filters & Search</h3>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setSelectedPlanType('')
-                  setStartDate('')
-                  setEndDate('')
-                }}
-                className="w-full bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
-              >
-                Clear Filters
-              </button>
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Plan Type
+                  </label>
+                  <select
+                    value={selectedPlanType}
+                    onChange={(e) => setSelectedPlanType(e.target.value)}
+                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {planTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                </div>
+                <div className="sm:col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                </div>
+                <div className="sm:col-span-2 lg:col-span-1 flex flex-col sm:flex-row gap-2 sm:items-end">
+                  <button
+                    onClick={() => {
+                      setSelectedPlanType('')
+                      setStartDate('')
+                      setEndDate('')
+                      loadData()
+                    }}
+                    className="w-full sm:w-auto bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
+                  >
+                    Clear Filters
+                  </button>
+                  <button
+                    onClick={openCreateModal}
+                    className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+                  >
+                    Add Expense
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Expenses List */}
+      {/* Expenses List - Mobile Optimized */}
       <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Expense Records</h3>
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Expense Records</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              {expenses.length} {expenses.length === 1 ? 'expense' : 'expenses'} found
+            </p>
+          </div>
+          <button
+            onClick={openCreateModal}
+            className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
+          >
+            <span>+</span>
+            <span>Add Expense</span>
+          </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Note
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created By
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+        
+        {expenses.length === 0 ? (
+          <div className="text-center py-12 px-4">
+            <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">No expenses found</h4>
+            <p className="text-gray-500 mb-6 max-w-sm mx-auto text-sm sm:text-base">
+              Start tracking your expenses by adding your first record manually or scan a receipt using the OCR feature.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              <button
+                onClick={openCreateModal}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
+              >
+                Add First Expense
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Card View */}
+            <div className="block sm:hidden divide-y divide-gray-200">
               {expenses.map((expense) => (
-                <tr key={expense.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(expense.date.toString())}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {expense.planType === 'other' ? 'Other' : 
-                       expense.planType ? expense.planType.charAt(0).toUpperCase() + expense.planType.slice(1) : 'Other'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(expense.amount)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
-                    <div className="truncate" title={expense.note}>
-                      {expense.note || '-'}
+                <div key={expense.id} className="p-4 hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {expense.note || 'No description'}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {expense.planType === 'other' ? 'Other' : expense.planType ? expense.planType.charAt(0).toUpperCase() + expense.planType.slice(1) : 'Other'}
+                      </p>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {expense.createdBy.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
+                    <div className="text-right ml-2">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {formatCurrency(expense.amount)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(expense.date.toString())}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-400">
+                      By {expense.createdBy?.email || 'Unknown'}
+                    </p>
+                    <div className="flex space-x-2">
                       <button
                         onClick={() => openEditModal(expense)}
-                        className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                        className="text-indigo-600 hover:text-indigo-900 text-xs font-medium"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteExpense(expense.id)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
+                        className="text-red-600 hover:text-red-900 text-xs font-medium"
                       >
                         Delete
                       </button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-          
-          {expenses.length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-500">
-                <p className="text-lg font-medium">No expenses found</p>
-                <p className="text-sm">Start by adding your first expense record.</p>
-              </div>
             </div>
-          )}
-        </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Note
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created By
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {expenses.map((expense) => (
+                    <tr key={expense.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(expense.date.toString())}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {expense.planType === 'other' ? 'Other' : 
+                           expense.planType ? expense.planType.charAt(0).toUpperCase() + expense.planType.slice(1) : 'Other'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {formatCurrency(expense.amount)}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                        <div className="truncate" title={expense.note}>
+                          {expense.note || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {expense.createdBy.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex justify-end space-x-2">
+                          <button
+                            onClick={() => openEditModal(expense)}
+                            className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteExpense(expense.id)}
+                            className="text-red-600 hover:text-red-900 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Create Expense Modal */}

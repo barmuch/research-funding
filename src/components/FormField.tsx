@@ -37,7 +37,7 @@ export default function FormField({
   children,
   error
 }: FormFieldProps) {
-  const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+  const inputClasses = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
 
   const renderInput = () => {
     if (children) {
@@ -101,7 +101,11 @@ export default function FormField({
       </label>
       {renderInput()}
       {error && error.length > 0 && (
-        <p className="mt-1 text-sm text-red-600">{error[0]}</p>
+        <div className="mt-1">
+          {error.map((err, index) => (
+            <p key={index} className="text-sm text-red-600">{err}</p>
+          ))}
+        </div>
       )}
     </div>
   )
