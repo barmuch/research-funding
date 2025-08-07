@@ -5,6 +5,13 @@ import Plan from '@/models/Plan'
 import { createExpenseSchema, getExpensesByWorkspaceSchema } from '@/lib/validations/expense'
 import { verifyWorkspaceAccess } from '@/lib/middleware/workspace-auth'
 import { createErrorResponse, createSuccessResponse } from '@/lib/api-response'
+import { Types } from 'mongoose'
+import type { 
+  ExpenseFilter, 
+  ExpenseDocument, 
+  PopulatedUser,
+  ObjectId 
+} from '@/types/api'
 
 // GET /api/expenses?workspaceId=... - Ambil semua expenses dari workspace tertentu
 export async function GET(request: NextRequest) {
@@ -53,7 +60,7 @@ export async function GET(request: NextRequest) {
     await connectDB()
 
     // Build query filter
-    const filter: any = { workspaceId: queryParams.workspaceId }
+    const filter: ExpenseFilter = { workspaceId: queryParams.workspaceId }
     
     if (queryParams.planType) {
       filter.planType = queryParams.planType

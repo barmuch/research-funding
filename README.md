@@ -162,6 +162,54 @@ This project is licensed under the MIT License.
 
 For support, email your-email@example.com or create an issue in the repository.
 
+## 🚀 Deployment
+
+### Deploy to Vercel
+
+1. **Connect to GitHub**
+   - Push your code to GitHub repository
+   - Connect your GitHub account to Vercel
+
+2. **Import Project**
+   - Go to [Vercel Dashboard](https://vercel.com/dashboard)
+   - Click "New Project"
+   - Import your GitHub repository
+
+3. **Configure Environment Variables**
+   - In Vercel dashboard, go to Project Settings > Environment Variables
+   - Add the following variables:
+     ```
+     MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/research-fund
+     JWT_SECRET=your-super-secure-jwt-secret-key-here
+     NEXTAUTH_URL=https://your-app-name.vercel.app
+     NEXTAUTH_SECRET=your-nextauth-secret-key
+     NEXT_PUBLIC_APP_URL=https://your-app-name.vercel.app
+     NODE_ENV=production
+     ```
+
+4. **Deploy**
+   - Click "Deploy" button
+   - Vercel will automatically build and deploy your application
+
+### MongoDB Atlas Setup for Production
+
+1. Create MongoDB Atlas account at [mongodb.com/atlas](https://www.mongodb.com/atlas)
+2. Create a new cluster
+3. Add your IP address to IP Access List (or use 0.0.0.0/0 for development)
+4. Create database user with read/write permissions
+5. Get connection string and update MONGODB_URI in Vercel
+
+### Environment Variables for Production
+
+Make sure to set these environment variables in Vercel:
+
+- `MONGODB_URI`: Your MongoDB Atlas connection string
+- `JWT_SECRET`: Strong secret key for JWT tokens
+- `NEXTAUTH_URL`: Your deployed app URL
+- `NEXTAUTH_SECRET`: Secret key for NextAuth
+- `NEXT_PUBLIC_APP_URL`: Public app URL for frontend
+- `NODE_ENV`: Set to "production"
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
