@@ -288,10 +288,10 @@ export default function WorkspacePlansPage() {
 
   // Prepare tabs
   const tabs: TabItem[] = [
-    { label: 'Overview', href: `/workspaces/${workspaceId}` },
+    { label: 'Members', href: `/workspaces/${workspaceId}` },
+    { label: 'Overview', href: `/workspaces/${workspaceId}/overview` },
     { label: 'Expenses', href: `/workspaces/${workspaceId}/expenses` },
     { label: 'Budget Plans', active: true, isButton: true }
-    
   ]
 
   // Prepare summary cards

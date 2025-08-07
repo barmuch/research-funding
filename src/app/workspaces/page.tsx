@@ -274,7 +274,7 @@ export default function WorkspacesPage() {
                   
                   <div className="flex space-x-2">
                     <Link
-                      href={`/workspaces/${workspace.workspaceId}`}
+                      href={`/workspaces/${workspace.workspaceId}/overview`}
                       className="flex-1 text-center bg-indigo-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
                     >
                       Overview

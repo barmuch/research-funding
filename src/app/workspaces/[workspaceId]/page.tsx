@@ -305,7 +305,8 @@ export default function WorkspaceDetailPage() {
 
   // Prepare tabs
   const tabs: TabItem[] = [
-    { label: 'Overview', active: true, isButton: true },
+    { label: 'Members', active: true, isButton: true },
+    { label: 'Overview', href: `/workspaces/${workspaceId}/overview` },
     { label: 'Expenses', href: `/workspaces/${workspaceId}/expenses` },
     { label: 'Budget Plans', href: `/workspaces/${workspaceId}/plans` }
   ]

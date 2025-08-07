@@ -337,10 +337,10 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
 
   // Prepare tabs
   const tabs: TabItem[] = [
-    { label: 'Overview', href: `/workspaces/${workspaceId}` },
+    { label: 'Members', href: `/workspaces/${workspaceId}` },
+    { label: 'Overview', href: `/workspaces/${workspaceId}/overview` },
     { label: 'Expenses', active: true, isButton: true },
     { label: 'Budget Plans', href: `/workspaces/${workspaceId}/plans` }
-    
   ]
 
   // Prepare summary cards
