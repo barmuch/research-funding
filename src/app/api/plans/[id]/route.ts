@@ -9,10 +9,10 @@ import mongoose from 'mongoose'
 // GET /api/plans/[id] - Ambil plan berdasarkan ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const planId = params.id
+    const { id: planId } = await params
 
     // Validate plan ID format
     if (!mongoose.Types.ObjectId.isValid(planId)) {
@@ -53,10 +53,10 @@ export async function GET(
 // PUT /api/plans/[id] - Update plan
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const planId = params.id
+    const { id: planId } = await params
     const body = await request.json()
 
     // Validate plan ID format
@@ -138,10 +138,10 @@ export async function PUT(
 // DELETE /api/plans/[id] - Hapus plan
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const planId = params.id
+    const { id: planId } = await params
 
     // Validate plan ID format
     if (!mongoose.Types.ObjectId.isValid(planId)) {

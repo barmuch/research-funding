@@ -38,6 +38,8 @@ const WorkspaceSchema = new Schema<IWorkspace>({
   toJSON: {
     transform: function(doc, ret: Record<string, unknown>) {
       ret.workspaceId = ret._id
+      ret.ownerId = ret.owner // Add ownerId for compatibility
+      ret.memberCount = (ret.members as unknown[]).length + 1 // +1 for owner
       delete ret._id
       delete ret.__v
       return ret

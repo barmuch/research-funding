@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import DashboardLayout from '@/components/DashboardLayout'
 import PageHeader from '@/components/PageHeader'
-import TabNavigation, { TabItem } from '@/components/TabNavigation'
 import ErrorState from '@/components/ErrorState'
 import BudgetGauge from '@/components/charts/BudgetGauge'
 import CategoryComparison from '@/components/charts/CategoryComparison'
@@ -107,29 +105,20 @@ export default function OverviewPage() {
 
   if (loading) {
     return (
-      <DashboardLayout breadcrumbs={[
-        { label: 'Workspaces', href: '/workspaces' },
-        { label: workspaceName || 'Workspace', href: `/workspaces/${workspaceId}` },
-        { label: 'Overview', active: true }
-      ]}>
-        <div className="space-y-6">
-          {/* Header skeleton */}
-          <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
-          
-          {/* Tabs skeleton */}
-          <div className="h-10 bg-gray-100 rounded w-full animate-pulse"></div>
-          
-          {/* Charts grid skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow">
-                <div className="h-6 bg-gray-100 rounded w-1/2 mb-4 animate-pulse"></div>
-                <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
-              </div>
-            ))}
-          </div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
+        
+        {/* Charts grid skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white p-6 rounded-lg shadow">
+              <div className="h-6 bg-gray-100 rounded w-1/2 mb-4 animate-pulse"></div>
+              <div className="h-48 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+          ))}
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 
@@ -142,31 +131,13 @@ export default function OverviewPage() {
     )
   }
 
-  // Prepare breadcrumbs
-  const breadcrumbs = [
-    { label: 'Workspaces', href: '/workspaces' },
-    { label: workspaceName, href: `/workspaces/${workspaceId}` },
-    { label: 'Overview', active: true }
-  ]
-
-  // Prepare tabs
-  const tabs: TabItem[] = [
-    { label: 'Members', href: `/workspaces/${workspaceId}` },
-    { label: 'Overview', active: true, isButton: true },
-    { label: 'Expenses', href: `/workspaces/${workspaceId}/expenses` },
-    { label: 'Budget Plans', href: `/workspaces/${workspaceId}/plans` }
-  ]
-
   return (
-    <DashboardLayout breadcrumbs={breadcrumbs}>
-      {/* Page Header */}
-      <PageHeader
-        title="Financial Overview"
-        description={`Analisis keuangan untuk workspace ${workspaceName}`}
-      />
-
-      {/* Navigation Tabs */}
-      <TabNavigation tabs={tabs} />
+    <>
+      {/* Header Section */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Financial Overview</h1>
+        <p className="mt-1 text-sm text-gray-500">Analisis keuangan untuk workspace {workspaceName}</p>
+      </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -247,6 +218,6 @@ export default function OverviewPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   )
 }

@@ -3,9 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Workspace, WorkspaceMember } from '@/types'
-import DashboardLayout from '@/components/DashboardLayout'
-import PageHeader from '@/components/PageHeader'
-import TabNavigation, { TabItem } from '@/components/TabNavigation'
 import SummaryCards, { SummaryCard } from '@/components/SummaryCards'
 import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
@@ -256,35 +253,30 @@ export default function WorkspaceDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout breadcrumbs={[
-        { label: 'Workspaces', href: '/workspaces' },
-        { label: 'Workspace', active: true }
-      ]}>
-        <div className="space-y-6">
-          <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
-          <div className="h-10 bg-gray-100 rounded w-full animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="space-y-6">
+        <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
+        <div className="h-10 bg-gray-100 rounded w-full animate-pulse"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white p-6 rounded-lg shadow">
+              <div className="h-4 bg-gray-100 rounded w-1/2 mb-2 animate-pulse"></div>
+              <div className="h-6 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="h-6 bg-gray-100 rounded w-1/4 mb-4 animate-pulse"></div>
+          <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow">
-                <div className="h-4 bg-gray-100 rounded w-1/2 mb-2 animate-pulse"></div>
-                <div className="h-6 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+              <div key={i} className="flex space-x-4">
+                <div className="h-4 bg-gray-100 rounded flex-1 animate-pulse"></div>
+                <div className="h-4 bg-gray-100 rounded w-24 animate-pulse"></div>
+                <div className="h-4 bg-gray-100 rounded w-20 animate-pulse"></div>
               </div>
             ))}
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="h-6 bg-gray-100 rounded w-1/4 mb-4 animate-pulse"></div>
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex space-x-4">
-                  <div className="h-4 bg-gray-100 rounded flex-1 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-24 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-20 animate-pulse"></div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 
@@ -296,20 +288,6 @@ export default function WorkspaceDetailPage() {
       />
     )
   }
-
-  // Prepare breadcrumbs
-  const breadcrumbs = [
-    { label: 'Workspaces', href: '/workspaces' },
-    { label: workspace.name, active: true }
-  ]
-
-  // Prepare tabs
-  const tabs: TabItem[] = [
-    { label: 'Members', active: true, isButton: true },
-    { label: 'Overview', href: `/workspaces/${workspaceId}/overview` },
-    { label: 'Expenses', href: `/workspaces/${workspaceId}/expenses` },
-    { label: 'Budget Plans', href: `/workspaces/${workspaceId}/plans` }
-  ]
 
   // Prepare summary cards
   const summaryCards: SummaryCard[] = [
@@ -350,48 +328,44 @@ export default function WorkspaceDetailPage() {
     }
   ]
 
-  // Header actions
-  const headerActions = isOwner && (
-    <>
-      <button
-        onClick={() => setShowEditModal(true)}
-        className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
-      >
-        Edit
-      </button>
-      <button
-        onClick={handleDeleteWorkspace}
-        className="bg-red-100 text-red-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-200 transition-colors"
-      >
-        Delete
-      </button>
-    </>
-  )
-
   return (
-    <DashboardLayout breadcrumbs={breadcrumbs}>
-      {/* Workspace Header */}
-      <PageHeader
-        title={workspace.name}
-        description={workspace.description}
-        actions={headerActions}
-      />
-
+    <>
       {/* Workspace Info */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-center space-x-4 text-sm text-gray-500">
-          <span>Created: {new Date(workspace.createdAt).toLocaleDateString()}</span>
-          <span>Members: {members.length}</span>
-          <span>
-            Your role: <span className="font-medium text-indigo-600">
-              {isOwner ? 'Owner' : 'Member'}
-            </span>
-          </span>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{workspace.name}</h1>
+            {workspace.description && (
+              <p className="text-gray-600 mb-4">{workspace.description}</p>
+            )}
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+              <span>Created: {new Date(workspace.createdAt).toLocaleDateString()}</span>
+              <span>Members: {members.length}</span>
+              <span>
+                Your role: <span className="font-medium text-indigo-600">
+                  {isOwner ? 'Owner' : 'Member'}
+                </span>
+              </span>
+            </div>
+          </div>
+          {isOwner && (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={() => setShowEditModal(true)}
+                className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleDeleteWorkspace}
+                className="bg-red-100 text-red-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-200 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Navigation Tabs */}
-      <TabNavigation tabs={tabs} />
 
       {/* Summary Cards */}
       <SummaryCards cards={summaryCards} />
@@ -430,14 +404,6 @@ export default function WorkspaceDetailPage() {
               )}
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Future: Fund tracking will go here */}
-      <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Fund Tracking</h2>
-        <div className="text-center py-8 text-gray-500">
-          <p>Fund tracking features coming soon...</p>
         </div>
       </div>
 
@@ -547,6 +513,6 @@ export default function WorkspaceDetailPage() {
       </Modal>
 
       <ConfirmDialog {...confirmationProps} />
-    </DashboardLayout>
+    </>
   )
 }

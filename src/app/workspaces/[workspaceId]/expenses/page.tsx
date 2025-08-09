@@ -1,11 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { Expense, CreateExpenseRequest, ExpensesResponse, ExpenseSummary } from '@/types'
-import DashboardLayout from '@/components/DashboardLayout'
-import PageHeader from '@/components/PageHeader'
-import TabNavigation, { TabItem } from '@/components/TabNavigation'
 import SummaryCards, { SummaryCard } from '@/components/SummaryCards'
 import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
@@ -15,25 +12,19 @@ import VisionOCR from '@/components/VisionOCR'
 import { appToast, crudToast } from '@/lib/toast'
 import { useCrudOperations, useConfirmation } from '@/hooks/useConfirmation'
 
-interface ExpensesPageProps {
-  params: Promise<{ workspaceId: string }>
-}
-
-export default async function ExpensesPage({ params }: ExpensesPageProps) {
-  const { workspaceId } = await params
+export default function WorkspaceExpensesPage() {
+  const params = useParams()
+  const workspaceId = params.workspaceId as string
   
-  return <ExpensesContent workspaceId={workspaceId} />
-}
-
-function ExpensesContent({ workspaceId }: { workspaceId: string }) {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [summary, setSummary] = useState<ExpenseSummary | null>(null)
   const [planTypes, setPlanTypes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [workspaceName, setWorkspaceName] = useState('')
-  
-  // Filters
+  const [extractedItems, setExtractedItems] = useState<any[]>([])
+
+  // Filter states
   const [selectedPlanType, setSelectedPlanType] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -41,6 +32,7 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showOCRModal, setShowOCRModal] = useState(false)
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   
   // Form states
@@ -61,7 +53,9 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
   const router = useRouter()
 
   useEffect(() => {
-    loadData()
+    if (workspaceId) {
+      loadData()
+    }
   }, [workspaceId, selectedPlanType, startDate, endDate])
 
   const loadData = async () => {
@@ -72,13 +66,13 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
         return
       }
 
-      // Build query parameters properly
+      // Build query parameters
       const expenseParams = new URLSearchParams({ workspaceId })
       if (selectedPlanType) expenseParams.append('planType', selectedPlanType)
       if (startDate) expenseParams.append('startDate', new Date(startDate).toISOString())
       if (endDate) expenseParams.append('endDate', new Date(endDate).toISOString())
 
-      // Load workspace info, expenses, and plan types in parallel
+      // Load data
       const [workspaceResponse, expensesResponse, planTypesResponse] = await Promise.all([
         fetch(`/api/workspaces/${workspaceId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -106,16 +100,17 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
         if (expensesResponse.status === 401) {
           localStorage.removeItem('token')
           router.push('/auth/login')
-        } else {
-          setError('Failed to load expenses data')
+          return
         }
+        setError(expensesData.message || 'Failed to load expenses')
       }
 
       if (planTypesData.success) {
         setPlanTypes(planTypesData.data.planTypes)
       }
+
     } catch (error) {
-      setError('Failed to load expenses data')
+      setError('Failed to load data')
     } finally {
       setLoading(false)
     }
@@ -123,6 +118,9 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
 
   const handleCreateExpense = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    setFormLoading(true)
+    setFormErrors({})
 
     const result = await createWithToast(
       async () => {
@@ -144,31 +142,32 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
         if (!data.success) {
           if (data.errors) {
             setFormErrors(data.errors)
+            throw new Error('Validation failed')
           }
           throw new Error(data.message || 'Failed to create expense')
         }
 
         return data
       },
-      'expense'
+      'expense',
+      { skipConfirmation: true }
     )
 
     if (result) {
       setShowCreateModal(false)
-      setFormData({
-        workspaceId: workspaceId,
-        planType: 'other',
-        amount: 0,
-        note: '',
-        date: new Date().toISOString().split('T')[0]
-      })
-      loadData() // Reload data
+      resetForm()
+      loadData()
     }
+
+    setFormLoading(false)
   }
 
   const handleUpdateExpense = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingExpense) return
+
+    setFormLoading(true)
+    setFormErrors({})
 
     const result = await updateWithToast(
       async () => {
@@ -192,6 +191,7 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
         if (!data.success) {
           if (data.errors) {
             setFormErrors(data.errors)
+            throw new Error('Validation failed')
           }
           throw new Error(data.message || 'Failed to update expense')
         }
@@ -204,15 +204,11 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
     if (result) {
       setShowEditModal(false)
       setEditingExpense(null)
-      setFormData({
-        workspaceId: workspaceId,
-        planType: 'other',
-        amount: 0,
-        note: '',
-        date: new Date().toISOString().split('T')[0]
-      })
-      loadData() // Reload data
+      resetForm()
+      loadData()
     }
+
+    setFormLoading(false)
   }
 
   const handleDeleteExpense = async (expenseId: string) => {
@@ -238,7 +234,7 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
     )
 
     if (result) {
-      loadData() // Reload data after successful deletion
+      loadData()
     }
   }
 
@@ -267,314 +263,267 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
     setShowCreateModal(true)
   }
 
+  const resetForm = () => {
+    setFormData({
+      workspaceId: workspaceId,
+      planType: 'other',
+      amount: 0,
+      note: '',
+      date: new Date().toISOString().split('T')[0]
+    })
+    setFormErrors({})
+    setFormLoading(false)
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      currency: 'IDR'
     }).format(amount)
   }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric'
     })
   }
 
+  const getSummaryCards = (): SummaryCard[] => {
+    if (!summary) return []
+
+    return [
+      {
+        title: 'Total Expenses',
+        value: summary.totalExpenses.toString(),
+        icon: '📊',
+        iconBgColor: 'bg-blue-100'
+      },
+      {
+        title: 'Total Amount',
+        value: formatCurrency(summary.totalAmount),
+        icon: '💰',
+        iconBgColor: 'bg-green-100'
+      },
+      {
+        title: 'Average',
+        value: formatCurrency(summary.totalAmount / (summary.totalExpenses || 1)),
+        icon: '📈',
+        iconBgColor: 'bg-purple-100'
+      }
+    ]
+  }
+
   if (loading) {
     return (
-      <DashboardLayout breadcrumbs={[
-        { label: 'Workspaces', href: '/workspaces' },
-        { label: 'Workspace', href: `/workspaces/${workspaceId}` },
-        { label: 'Expenses', active: true }
-      ]}>
-        <div className="space-y-6">
-          <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
-          <div className="h-10 bg-gray-100 rounded w-full animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow">
-                <div className="h-4 bg-gray-100 rounded w-1/2 mb-2 animate-pulse"></div>
-                <div className="h-6 bg-gray-100 rounded w-3/4 animate-pulse"></div>
-              </div>
+              <div key={i} className="h-24 bg-gray-200 rounded"></div>
             ))}
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="h-6 bg-gray-100 rounded w-1/4 mb-4 animate-pulse"></div>
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex space-x-4">
-                  <div className="h-4 bg-gray-100 rounded flex-1 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-24 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-20 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-16 animate-pulse"></div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <div className="h-96 bg-gray-200 rounded"></div>
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 
   if (error) {
-    return (
-      <ErrorState 
-        message={error} 
-        backLink={{ href: `/workspaces/${workspaceId}`, label: 'Back to Workspace' }}
-      />
-    )
+    return <ErrorState message={error} />
   }
 
-  // Prepare breadcrumbs
-  const breadcrumbs = [
-    { label: 'Workspaces', href: '/workspaces' },
-    { label: workspaceName || 'Workspace', href: `/workspaces/${workspaceId}` },
-    { label: 'Expenses', active: true }
-  ]
-
-  // Prepare tabs
-  const tabs: TabItem[] = [
-    { label: 'Members', href: `/workspaces/${workspaceId}` },
-    { label: 'Overview', href: `/workspaces/${workspaceId}/overview` },
-    { label: 'Expenses', active: true, isButton: true },
-    { label: 'Budget Plans', href: `/workspaces/${workspaceId}/plans` }
-  ]
-
-  // Prepare summary cards
-  const summaryCards: SummaryCard[] = summary ? [
-    {
-      title: 'Total Expenses',
-      value: summary.totalExpenses,
-      icon: (
-        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-      ),
-      iconBgColor: 'bg-red-500'
-    },
-    {
-      title: 'Total Amount',
-      value: formatCurrency(summary.totalAmount),
-      icon: (
-        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-        </svg>
-      ),
-      iconBgColor: 'bg-green-500'
-    },
-    {
-      title: 'Average Amount',
-      value: summary.totalExpenses > 0 ? formatCurrency(summary.totalAmount / summary.totalExpenses) : formatCurrency(0),
-      icon: (
-        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
-      iconBgColor: 'bg-blue-500'
-    }
-  ] : []
-
   return (
-    <DashboardLayout breadcrumbs={breadcrumbs}>
+    <div className="space-y-6">
       {/* Header */}
-      <PageHeader
-        title="Actual Expenses"
-        description="Track and manage actual spending for this workspace"
-        actions={
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Track and manage your workspace expenses
+          </p>
+        </div>
+        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+          {/* OCR Scan Button */}
           <button
-            onClick={openCreateModal}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
+            onClick={() => setShowOCRModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center space-x-2"
+          >
+            <span>📷</span>
+            <span>Scan Receipt</span>
+          </button>
+          {/* Add Expense Button */}
+          <button
+            onClick={() => openCreateModal()}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Add Expense
           </button>
-        }
-      />
-
-      {/* Navigation Tabs */}
-      <TabNavigation tabs={tabs} />
+        </div>
+      </div>
 
       {/* Summary Cards */}
-      {summary && <SummaryCards cards={summaryCards} />}
+      <SummaryCards cards={getSummaryCards()} />
 
-      {/* Quick Actions Section with OCR - Mobile Optimized */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-6">
-        {/* OCR Scanner - Full width on mobile */}
-        <div className="lg:col-span-1 order-1 lg:order-1">
-          <VisionOCR 
-            workspaceId={workspaceId}
-            onExtractedItems={(items) => {
-              console.log('Extracted items:', items)
-            }}
-            onSuccessAddItem={() => {
-              loadData()
-              appToast.success('Item from receipt added successfully!')
-            }}
-          />
-        </div>
-        
-        {/* Filters - Full width on mobile, stacks below OCR */}
-        <div className="lg:col-span-2 order-2 lg:order-2">
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">Filters & Search</h3>
-            </div>
-            <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Plan Type
-                  </label>
-                  <select
-                    value={selectedPlanType}
-                    onChange={(e) => setSelectedPlanType(e.target.value)}
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  >
-                    <option value="">All Categories</option>
-                    {planTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+      {/* OCR Extracted Items */}
+      {extractedItems.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-medium text-blue-900">📷 Extracted from Receipt</h3>
+            <button
+              onClick={() => setExtractedItems([])}
+              className="text-blue-700 hover:text-blue-900 text-sm font-medium"
+            >
+              Clear All
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {extractedItems.map((item, index) => (
+              <div key={index} className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-medium text-gray-900 text-sm">{item.item}</h4>
+                  <span className="text-green-600 font-semibold text-sm">
+                    Rp {Number(item.price).toLocaleString('id-ID')}
+                  </span>
                 </div>
-                <div className="sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  />
-                </div>
-                <div className="sm:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                  />
-                </div>
-                <div className="sm:col-span-2 lg:col-span-1 flex flex-col sm:flex-row gap-2 sm:items-end">
+                <div className="flex space-x-2">
                   <button
-                    onClick={() => {
-                      setSelectedPlanType('')
-                      setStartDate('')
-                      setEndDate('')
-                      loadData()
+                    onClick={async () => {
+                      // Fill form with this item's data
+                      const itemData = {
+                        workspaceId: workspaceId,
+                        planType: item.planType || 'other',
+                        amount: parseFloat(item.price.replace(/[^\d.-]/g, '')) || 0,
+                        note: item.item,
+                        date: new Date().toISOString().split('T')[0]
+                      }
+                      
+                      // Save directly without opening modal
+                      const result = await createWithToast(
+                        async () => {
+                          const token = localStorage.getItem('token')
+                          const response = await fetch('/api/expenses', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                              ...itemData,
+                              date: new Date(itemData.date!).toISOString()
+                            })
+                          })
+
+                          const data = await response.json()
+
+                          if (!data.success) {
+                            throw new Error(data.message || 'Failed to create expense')
+                          }
+
+                          return data
+                        },
+                        'expense'
+                      )
+
+                      if (result) {
+                        // Remove item from extracted items
+                        const updated = extractedItems.filter((_, i) => i !== index)
+                        setExtractedItems(updated)
+                        
+                        // Reload expense data to show new item in table
+                        loadData()
+                      }
                     }}
-                    className="w-full sm:w-auto bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
+                    className="flex-1 bg-indigo-600 text-white px-3 py-1 text-xs rounded hover:bg-indigo-700 transition-colors"
                   >
-                    Clear Filters
+                    Add to Expenses
                   </button>
                   <button
-                    onClick={openCreateModal}
-                    className="w-full sm:w-auto bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 transition-colors"
+                    onClick={() => {
+                      const updated = extractedItems.filter((_, i) => i !== index)
+                      setExtractedItems(updated)
+                    }}
+                    className="bg-red-600 text-white px-2 py-1 text-xs rounded hover:bg-red-700 transition-colors"
                   >
-                    Add Expense
+                    ✕
                   </button>
                 </div>
               </div>
-            </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Filters</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Category
+            </label>
+            <select
+              value={selectedPlanType}
+              onChange={(e) => setSelectedPlanType(e.target.value)}
+              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">All Categories</option>
+              {planTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            />
           </div>
         </div>
       </div>
 
-      {/* Expenses List - Mobile Optimized */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">Expense Records</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              {expenses.length} {expenses.length === 1 ? 'expense' : 'expenses'} found
-            </p>
-          </div>
-          <button
-            onClick={openCreateModal}
-            className="w-full sm:w-auto bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center space-x-2"
-          >
-            <span>+</span>
-            <span>Add Expense</span>
-          </button>
-        </div>
-        
-        {expenses.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <div className="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 sm:w-12 sm:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h4 className="text-lg font-medium text-gray-900 mb-2">No expenses found</h4>
-            <p className="text-gray-500 mb-6 max-w-sm mx-auto text-sm sm:text-base">
-              Start tracking your expenses by adding your first record manually or scan a receipt using the OCR feature.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-3">
+      {/* Expenses List */}
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Expenses</h3>
+          {expenses.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-6xl mb-4">💰</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No expenses found</h3>
+              <p className="text-gray-600 mb-6">
+                {selectedPlanType || startDate || endDate 
+                  ? 'No expenses match your current filters.' 
+                  : 'Start by adding your first expense.'}
+              </p>
               <button
-                onClick={openCreateModal}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
+                onClick={() => openCreateModal()}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700"
               >
                 Add First Expense
               </button>
             </div>
-          </div>
-        ) : (
-          <>
-            {/* Mobile Card View */}
-            <div className="block sm:hidden divide-y divide-gray-200">
-              {expenses.map((expense) => (
-                <div key={expense.id} className="p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {expense.note || 'No description'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {expense.planType === 'other' ? 'Other' : expense.planType ? expense.planType.charAt(0).toUpperCase() + expense.planType.slice(1) : 'Other'}
-                      </p>
-                    </div>
-                    <div className="text-right ml-2">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(expense.amount)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatDate(expense.date.toString())}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs text-gray-400">
-                      By {expense.createdBy?.email || 'Unknown'}
-                    </p>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => openEditModal(expense)}
-                        className="text-indigo-600 hover:text-indigo-900 text-xs font-medium"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteExpense(expense.id)}
-                        className="text-red-600 hover:text-red-900 text-xs font-medium"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden sm:block overflow-x-auto">
+          ) : (
+            <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -605,7 +554,7 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
                         {formatDate(expense.date.toString())}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                           {expense.planType === 'other' ? 'Other' : 
                            expense.planType ? expense.planType.charAt(0).toUpperCase() + expense.planType.slice(1) : 'Other'}
                         </span>
@@ -613,10 +562,8 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {formatCurrency(expense.amount)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
-                        <div className="truncate" title={expense.note}>
-                          {expense.note || '-'}
-                        </div>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                        {expense.note || '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {expense.createdBy.email}
@@ -625,13 +572,13 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
                         <div className="flex justify-end space-x-2">
                           <button
                             onClick={() => openEditModal(expense)}
-                            className="text-indigo-600 hover:text-indigo-900 transition-colors"
+                            className="text-indigo-600 hover:text-indigo-900 text-sm"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteExpense(expense.id)}
-                            className="text-red-600 hover:text-red-900 transition-colors"
+                            className="text-red-600 hover:text-red-900 text-sm"
                           >
                             Delete
                           </button>
@@ -642,51 +589,59 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
                 </tbody>
               </table>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Create Expense Modal */}
+      {/* Create Modal */}
       <Modal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          setShowCreateModal(false)
+          resetForm()
+        }}
         title="Add New Expense"
       >
-        <form onSubmit={handleCreateExpense} className="space-y-4">
-          <FormField
-            label="Category"
-            error={formErrors.planType}
-            required
-          >
-            <select
-              value={formData.planType}
-              onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
-              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+        <form
+          onSubmit={handleCreateExpense}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              label="Category"
+              error={formErrors.planType}
               required
             >
-              {planTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
-                </option>
-              ))}
-            </select>
-          </FormField>
+              <select
+                value={formData.planType}
+                onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
+                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              >
+                {planTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
-          <FormField
-            label="Amount (IDR)"
-            error={formErrors.amount}
-            required
-          >
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
-              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            <FormField
+              label="Amount (IDR)"
+              error={formErrors.amount}
               required
-            />
-          </FormField>
+            >
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </FormField>
+          </div>
 
           <FormField
             label="Date"
@@ -695,7 +650,7 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
           >
             <input
               type="date"
-              value={formData.date?.toString().split('T')[0]}
+              value={formData.date?.toString()}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               required
@@ -712,21 +667,28 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               rows={3}
               maxLength={500}
+              placeholder="Add any additional notes..."
             />
+            <p className="mt-1 text-sm text-gray-500">
+              {formData.note?.length || 0}/500 characters
+            </p>
           </FormField>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-400 transition-colors"
+              onClick={() => {
+                setShowCreateModal(false)
+                resetForm()
+              }}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-400"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={formLoading}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
             >
               {formLoading ? 'Creating...' : 'Create Expense'}
             </button>
@@ -734,50 +696,56 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
         </form>
       </Modal>
 
-      {/* Edit Expense Modal */}
+      {/* Edit Modal */}
       <Modal
-        isOpen={showEditModal && !!editingExpense}
+        isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false)
           setEditingExpense(null)
+          resetForm()
         }}
         title="Edit Expense"
       >
-        <form onSubmit={handleUpdateExpense} className="space-y-4">
-          <FormField
-            label="Category"
-            error={formErrors.planType}
-            required
-          >
-            <select
-              value={formData.planType}
-              onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
-              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+        <form
+          onSubmit={handleUpdateExpense}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              label="Category"
+              error={formErrors.planType}
               required
             >
-              {planTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
-                </option>
-              ))}
-            </select>
-          </FormField>
+              <select
+                value={formData.planType}
+                onChange={(e) => setFormData({ ...formData, planType: e.target.value })}
+                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              >
+                {planTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type === 'other' ? 'Other' : type.charAt(0).toUpperCase() + type.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
-          <FormField
-            label="Amount (IDR)"
-            error={formErrors.amount}
-            required
-          >
-            <input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-              className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            <FormField
+              label="Amount (IDR)"
+              error={formErrors.amount}
               required
-            />
-          </FormField>
+            >
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={formData.amount}
+                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+            </FormField>
+          </div>
 
           <FormField
             label="Date"
@@ -786,7 +754,7 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
           >
             <input
               type="date"
-              value={formData.date?.toString().split('T')[0]}
+              value={formData.date?.toString()}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               required
@@ -803,24 +771,29 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               rows={3}
               maxLength={500}
+              placeholder="Add any additional notes..."
             />
+            <p className="mt-1 text-sm text-gray-500">
+              {formData.note?.length || 0}/500 characters
+            </p>
           </FormField>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={() => {
                 setShowEditModal(false)
                 setEditingExpense(null)
+                resetForm()
               }}
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-400 transition-colors"
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-400"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={formLoading}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
             >
               {formLoading ? 'Updating...' : 'Update Expense'}
             </button>
@@ -828,7 +801,31 @@ function ExpensesContent({ workspaceId }: { workspaceId: string }) {
         </form>
       </Modal>
 
+      {/* OCR Modal */}
+      <Modal
+        isOpen={showOCRModal}
+        onClose={() => setShowOCRModal(false)}
+        title="📷 Scan Receipt"
+      >
+        <VisionOCR
+          workspaceId={workspaceId}
+          planTypes={planTypes}
+          onExtractedItems={(items) => {
+            // Close OCR modal and display extracted items on main page
+            setShowOCRModal(false)
+            setExtractedItems(items)
+          }}
+          onSuccessAddItem={() => {
+            // Reload data after successful addition directly from OCR
+            loadData()
+            setShowOCRModal(false)
+            resetForm()
+          }}
+        />
+      </Modal>
+
+      {/* Confirmation Dialog */}
       <ConfirmDialog {...confirmationProps} />
-    </DashboardLayout>
+    </div>
   )
 }

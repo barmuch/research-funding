@@ -234,10 +234,10 @@ export default function DashboardPage() {
                 ) : (
                   <div className="space-y-3">
                     {workspaces.slice(0, 3).map((workspace) => (
-                      <div key={workspace._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <div key={workspace.workspaceId} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                         <div className="flex-1">
                           <Link 
-                            href={`/workspaces/${workspace._id}`}
+                            href={`/workspaces/${workspace.workspaceId}`}
                             className="text-sm font-medium text-gray-900 hover:text-indigo-600"
                           >
                             {workspace.name}

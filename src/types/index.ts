@@ -45,7 +45,6 @@ export interface ApiSuccess<T> {
 
 // Workspace related types
 export interface Workspace {
-  _id: string
   workspaceId: string
   name: string
   description: string

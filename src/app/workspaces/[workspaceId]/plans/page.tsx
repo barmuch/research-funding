@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Plan, PlansResponse } from '@/types'
-import DashboardLayout from '@/components/DashboardLayout'
 import PageHeader from '@/components/PageHeader'
-import TabNavigation, { TabItem } from '@/components/TabNavigation'
 import SummaryCards, { SummaryCard } from '@/components/SummaryCards'
 import ErrorState from '@/components/ErrorState'
 import Modal from '@/components/Modal'
@@ -236,37 +234,31 @@ export default function WorkspacePlansPage() {
 
   if (loading) {
     return (
-      <DashboardLayout breadcrumbs={[
-        { label: 'Workspaces', href: '/workspaces' },
-        { label: 'Workspace', href: `/workspaces/${workspaceId}` },
-        { label: 'Budget Plans', active: true }
-      ]}>
-        <div className="space-y-6">
-          <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
-          <div className="h-10 bg-gray-100 rounded w-full animate-pulse"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow">
-                <div className="h-4 bg-gray-100 rounded w-1/2 mb-2 animate-pulse"></div>
-                <div className="h-6 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+      <div className="space-y-6">
+        <div className="h-8 bg-gray-100 rounded w-1/3 animate-pulse"></div>
+        <div className="h-10 bg-gray-100 rounded w-full animate-pulse"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-white p-6 rounded-lg shadow">
+              <div className="h-4 bg-gray-100 rounded w-1/2 mb-2 animate-pulse"></div>
+              <div className="h-6 bg-gray-100 rounded w-3/4 animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="h-6 bg-gray-100 rounded w-1/4 mb-4 animate-pulse"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex space-x-4">
+                <div className="h-4 bg-gray-100 rounded flex-1 animate-pulse"></div>
+                <div className="h-4 bg-gray-100 rounded w-24 animate-pulse"></div>
+                <div className="h-4 bg-gray-100 rounded w-20 animate-pulse"></div>
+                <div className="h-4 bg-gray-100 rounded w-16 animate-pulse"></div>
               </div>
             ))}
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="h-6 bg-gray-100 rounded w-1/4 mb-4 animate-pulse"></div>
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex space-x-4">
-                  <div className="h-4 bg-gray-100 rounded flex-1 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-24 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-20 animate-pulse"></div>
-                  <div className="h-4 bg-gray-100 rounded w-16 animate-pulse"></div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 
@@ -280,20 +272,6 @@ export default function WorkspacePlansPage() {
   }
 
   // Prepare breadcrumbs
-  const breadcrumbs = [
-    { label: 'Workspaces', href: '/workspaces' },
-    { label: workspaceName || 'Workspace', href: `/workspaces/${workspaceId}` },
-    { label: 'Budget Plans', active: true }
-  ]
-
-  // Prepare tabs
-  const tabs: TabItem[] = [
-    { label: 'Members', href: `/workspaces/${workspaceId}` },
-    { label: 'Overview', href: `/workspaces/${workspaceId}/overview` },
-    { label: 'Expenses', href: `/workspaces/${workspaceId}/expenses` },
-    { label: 'Budget Plans', active: true, isButton: true }
-  ]
-
   // Prepare summary cards
   const summaryCards: SummaryCard[] = [
     {
@@ -329,23 +307,22 @@ export default function WorkspacePlansPage() {
   ]
 
   return (
-    <DashboardLayout breadcrumbs={breadcrumbs}>
-      {/* Header */}
-      <PageHeader
-        title="Budget Planning"
-        description={`Manage funding plans for ${workspaceName}`}
-        actions={
+    <>
+      {/* Header Section */}
+      <div className="sm:flex sm:items-center sm:justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Budget Planning</h1>
+          <p className="mt-1 text-sm text-gray-500">Manage funding plans for {workspaceName}</p>
+        </div>
+        <div className="mt-4 sm:mt-0">
           <button
             onClick={openCreateModal}
             className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
             Add New Plan
           </button>
-        }
-      />
-
-      {/* Navigation Tabs */}
-      <TabNavigation tabs={tabs} />
+        </div>
+      </div>
 
       {/* Summary Cards */}
       <SummaryCards cards={summaryCards} />
@@ -357,6 +334,14 @@ export default function WorkspacePlansPage() {
             <div className="sm:flex-auto">
               <h2 className="text-lg font-medium text-gray-900">Budget Plans</h2>
               <p className="mt-1 text-sm text-gray-500">Manage your research funding plans</p>
+            </div>
+            <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+              <button
+                onClick={openCreateModal}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors"
+              >
+                Add New Plan
+              </button>
             </div>
           </div>
           
@@ -583,6 +568,6 @@ export default function WorkspacePlansPage() {
 
       {/* Confirmation Dialog */}
       <ConfirmDialog {...confirmationProps} />
-    </DashboardLayout>
+    </>
   )
 }
