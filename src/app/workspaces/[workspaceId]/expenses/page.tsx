@@ -198,7 +198,8 @@ export default function WorkspaceExpensesPage() {
 
         return data
       },
-      'expense'
+      'expense',
+      { skipConfirmation: true }
     )
 
     if (result) {
@@ -212,29 +213,40 @@ export default function WorkspaceExpensesPage() {
   }
 
   const handleDeleteExpense = async (expenseId: string) => {
-    const result = await deleteWithToast(
-      async () => {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`/api/expenses/${expenseId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
+    const confirmed = await showConfirmation({
+      title: 'Hapus Expense',
+      message: 'Apakah Anda yakin ingin menghapus expense ini? Tindakan ini tidak dapat dibatalkan.',
+      confirmText: 'Ya, Hapus',
+      cancelText: 'Batal',
+      confirmButtonStyle: 'danger'
+    })
+
+    if (confirmed) {
+      const result = await deleteWithToast(
+        async () => {
+          const token = localStorage.getItem('token')
+          const response = await fetch(`/api/expenses/${expenseId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+
+          const data = await response.json()
+
+          if (!data.success) {
+            throw new Error(data.message || 'Failed to delete expense')
           }
-        })
 
-        const data = await response.json()
+          return data
+        },
+        'expense',
+        { skipConfirmation: true }
+      )
 
-        if (!data.success) {
-          throw new Error(data.message || 'Failed to delete expense')
-        }
-
-        return data
-      },
-      'expense'
-    )
-
-    if (result) {
-      loadData()
+      if (result) {
+        loadData()
+      }
     }
   }
 
@@ -395,7 +407,7 @@ export default function WorkspaceExpensesPage() {
                       const itemData = {
                         workspaceId: workspaceId,
                         planType: item.planType || 'other',
-                        amount: parseFloat(item.price.replace(/[^\d.-]/g, '')) || 0,
+                        amount: parseFloat(item.price.replace(/[^\d.-]/g, '')),
                         note: item.item,
                         date: new Date().toISOString().split('T')[0]
                       }
@@ -636,7 +648,7 @@ export default function WorkspaceExpensesPage() {
                 min="0.01"
                 step="0.01"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
                 className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                 required
               />
